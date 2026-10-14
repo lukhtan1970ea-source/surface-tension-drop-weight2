@@ -51,7 +51,7 @@ R_capillary = 0.0015
 g = 9.81
 
 # ІСПРАВЛЕНО: Маса каплі розраховується з вашим точним коефіцієнтом 1.02
-mass_one_drop_true = (1.1 * np.pi * R_capillary * sigma_true) / g
+mass_one_drop_true = (1.12 * np.pi * R_capillary * sigma_true) / g
 
 # Легкий лабораторний шум додається ТІЛЬКИ до ваги самої рідини
 np.random.seed(int(temperature * 10))
