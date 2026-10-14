@@ -58,7 +58,7 @@ true_neck_r_mm = 0.44 * capillary_constant + 0.28  # істинний радіу
 
 # ІСПРАВЛЕНО: Маса каплі жорстко прив'язана до мікроскопічного радіуса шийки конкретної речовини!
 # Коефіцієнт 1.14 тепер працює як ідеальна константа відриву для будь-якого діаметра
-mass_one_drop_true = (1.14 * np.pi * (true_neck_r_mm / 1000.0) * sigma_true) / g
+mass_one_drop_true = (1.15 * np.pi * (true_neck_r_mm / 1000.0) * sigma_true) / g
 
 # Легкий лабораторний шум для ваг
 np.random.seed(int(temperature * 10))
