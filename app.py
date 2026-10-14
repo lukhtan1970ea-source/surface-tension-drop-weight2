@@ -45,21 +45,29 @@ if selected_liquid != st.session_state.last_liquid or temperature != st.session_
     st.session_state.last_temp = temperature
     reset_stand_state()
 
-# Розрахунок чесної фізики речовини
+# ==========================================
+# РОЗРАХУНОК ФІЗИКИ З УРАХУВАННЯМ ГЕОМЕТРІЇ ШИЙКИ
+# ==========================================
 sigma_true, rho_true = get_physical_properties(selected_liquid, temperature)
-R_capillary = 0.0015  
+R_capillary = 0.0015  # 1.5 мм
 g = 9.81
 
-# ІСПРАВЛЕНО: Маса каплі розраховується з вашим точним коефіцієнтом 1.02
-mass_one_drop_true = (1.14 * np.pi * R_capillary * sigma_true) / g
+# Емуляція розрахунку радіуса шийки (точно так само, як у JavaScript мікроскопа)
+capillary_constant = (sigma_true / (rho_true * g)) ** 0.5 * 1000  # в мм
+true_neck_r_mm = 0.44 * capillary_constant + 0.28  # істинний радіус шийки в мм
 
-# Легкий лабораторний шум додається ТІЛЬКИ до ваги самої рідини
+# ІСПРАВЛЕНО: Маса каплі жорстко прив'язана до мікроскопічного радіуса шийки конкретної речовини!
+# Коефіцієнт 1.14 тепер працює як ідеальна константа відриву для будь-якого діаметра
+mass_one_drop_true = (1.14 * np.pi * (true_neck_r_mm / 1000.0) * sigma_true) / g
+
+# Легкий лабораторний шум для ваг
 np.random.seed(int(temperature * 10))
 actual_mass_one_drop = max(1e-6, mass_one_drop_true + np.random.normal(0, mass_one_drop_true * 0.003))
 
-# Повна чесна маса рідини
+# Повна маса рідини у грамах
 total_drops_mass_g = (target_drops * actual_mass_one_drop) * 1000 
 current_weight = st.session_state.tare_weight + total_drops_mass_g
+
 
 # Текст заголовка програми
 st.title("🔬 Лабораторна робота: Визначення коефіцієнта поверхневого натягу методом зважування крапель")
