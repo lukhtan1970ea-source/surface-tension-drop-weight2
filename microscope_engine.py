@@ -1,23 +1,22 @@
 def generate_microscope_svg(sigma_true, rho_true, old_mic_x=0.0, old_mic_y=0.0):
     """
     Автономний високоточний JS/SVG рушій окуляра мікроскопа.
-    Усі розрахунки форми краплі та шкали перенесені на сторону клієнта (JS),
-    що повністю гарантує працездатність та усуває конфлікти синтаксису.
+    Повне двокоординатне керування (Гвинт X та Гвинт Y) повернуто під картинку.
     """
     
-    # Шаблон без f-строк Python — полная безопасность для фигурных скобок JS
+    # Шаблон без f-строк Python — повна безпека для фігурних дужок JS
     svg_html_template = """
-    <div style="background: #161616; padding: 20px; border-radius: 16px; width: 420px; margin: 0 auto; box-shadow: 0 8px 32px rgba(0,0,0,0.6); border: 1px solid #333; text-align: center;">
+    <div style="background: #161616; padding: 15px; border-radius: 16px; width: 420px; margin: 0 auto; box-shadow: 0 8px 32px rgba(0,0,0,0.6); border: 1px solid #333; text-align: center;">
         
         <!-- ОКУЛЯР ОПТИЧНОГО МІКРОСКОПА -->
-        <svg id="drop-container" width="400" height="400" viewBox="0 0 400 400" style="background: #010401; border: 4px solid #555; border-radius: 50%; margin-bottom: 15px;">
+        <svg id="drop-container" width="400" height="400" viewBox="0 0 400 400" style="background: #010401; border: 4px solid #555; border-radius: 50%; margin-bottom: 12px;">
             
             <!-- Скляний капіляр знизу -->
             <rect x="162" y="340" width="76" height="60" fill="#333" opacity="0.85" />
             <rect x="165" y="340" width="70" height="60" fill="#010401" />
             <line x1="165" y1="340" x2="235" y2="340" stroke="#666" stroke-width="3" />
 
-            <!-- Контур краплі (росте ВГОРУ від капіляра) -->
+            <!-- Flex-контур краплі (динамічна геометрія) -->
             <path id="fluid-drop" d="" fill="rgba(100, 210, 255, 0.43)" stroke="lightskyblue" stroke-width="2.3" stroke-linejoin="round" />
             
             <!-- Летяча сфера відриву -->
@@ -31,19 +30,33 @@ def generate_microscope_svg(sigma_true, rho_true, old_mic_x=0.0, old_mic_y=0.0):
             </g>
         </svg>
 
-        <!-- МЕХАНІЧНІ ГВИНТИ ТОНКОЇ НАВОДКИ ПІД КАРТИНКОЮ -->
-        <div style="color: #ccc; font-family: sans-serif; font-size: 13px; text-align: left; padding: 0 10px;">
-            <div style="margin-bottom: 12px;">
-                <label>⚙️ Гвинт X (горизонтальний зсув візира): <span id="val-x">0.00</span> мм</label>
-                <input type="range" id="slider-x" min="-2.0" max="2.0" step="0.01" value="0" style="width: 100%; margin-top: 5px; accent-color: red;">
+        <!-- МЕХАНІЧНІ ГВИНТИ ТОНКОЇ НАВОДКИ (Обидва осі у компактному красивому блоці) -->
+        <div style="color: #ccc; font-family: sans-serif; font-size: 12px; text-align: left; padding: 8px 12px; background: #1e1e1e; border-radius: 8px; border: 1px solid #2a2a2a;">
+            
+            <!-- ГВИНТ Х -->
+            <div style="margin-bottom: 8px;">
+                <label style="display: block; margin-bottom: 2px; font-weight: bold; color: #1cf;">⚙️ Гвинт X (горизонтальний зсув візира):</label>
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                    <input type="range" id="slider-x" min="-2.0" max="2.0" step="0.01" value="0" style="flex-grow: 1; accent-color: red; cursor: pointer;">
+                    <span style="background: #000; padding: 1px 6px; border-radius: 4px; font-family: monospace; font-size: 13px; color: #00ff66; border: 1px solid #333; min-width: 50px; text-align: right;"><span id="val-x">0.00</span> мм</span>
+                </div>
             </div>
+
+            <!-- ГВИНТ Y (ПОВЕРНУТО) -->
+            <div>
+                <label style="display: block; margin-bottom: 2px; font-weight: bold; color: #1cf;">⚙️ Гвинт Y (вертикальний зсув візира):</label>
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                    <input type="range" id="slider-y" min="-4.0" max="4.0" step="0.01" value="0" style="flex-grow: 1; accent-color: red; cursor: pointer;">
+                    <span style="background: #000; padding: 1px 6px; border-radius: 4px; font-family: monospace; font-size: 13px; color: #00ff66; border: 1px solid #333; min-width: 50px; text-align: right;"><span id="val-y">0.00</span> мм</span>
+                </div>
+            </div>
+
         </div>
     </div>
 
-    <!-- Передаем чистые физические свойства из Python в скрытые параметры HTML -->
+    <!-- Передаємо чисті фізичні властивості з Python в приховані параметри HTML -->
     <input type="hidden" id="param-sigma" value="DYNAMIC_SIGMA">
     <input type="hidden" id="param-rho" value="DYNAMIC_RHO">
-
     <script>
         if (window.dropAnimInterval) { clearInterval(window.dropAnimInterval); }
         
@@ -53,25 +66,26 @@ def generate_microscope_svg(sigma_true, rho_true, old_mic_x=0.0, old_mic_y=0.0):
         const lineY = document.getElementById('grid-line-y');
         const ticksContainer = document.getElementById('grid-ticks');
         const sliderX = document.getElementById('slider-x');
+        const sliderY = document.getElementById('slider-y');
         const valX = document.getElementById('val-x');
+        const valY = document.getElementById('val-y');
 
-        // Считываем физику вещества
         const sigma = parseFloat(document.getElementById('param-sigma').value) || 0.072;
         const rho = parseFloat(document.getElementById('param-rho').value) || 1000.0;
 
-        // Рассчитываем индивидуальный радиус шейки по вашей формуле с коэффициентом 1.02!
-        // Для Воды (~72 мН/м) выйдет ~30.6px, для Ацетона (~23 мН/м) шейка сузится до ~28.2px
-        const capillaryConstant = Math.sqrt(sigma / (rho * 9.81)) * 1000; // в мм
+        const capillaryConstant = Math.sqrt(sigma / (rho * 9.81)) * 1000; 
         const trueNeckRmm = 0.44 * capillaryConstant + 0.28;
         const targetNeckRadiusPx = Math.max(22.0, Math.min(34.5, (trueNeckRmm * 35.0) / 1.5));
 
         // ТРИСТУПЕНЕВА ШКАЛА ГОСТ (1 мм = 40px)
         function updateMicroscopeGrid() {
             let x_mm = parseFloat(sliderX.value);
+            let y_mm = parseFloat(sliderY.value);
             valX.innerText = x_mm.toFixed(2);
+            valY.innerText = y_mm.toFixed(2);
 
             let px_x = 200 + (x_mm * 40); 
-            let px_y = 200; // Горизонтальная нить строго по центру
+            let px_y = 200 - (y_mm * 40); // Переміщення по вертикалі відновлено!
 
             lineX.setAttribute('x1', px_x); lineX.setAttribute('x2', px_x);
             lineY.setAttribute('y1', px_y); lineY.setAttribute('y2', px_y);
@@ -94,6 +108,7 @@ def generate_microscope_svg(sigma_true, rho_true, old_mic_x=0.0, old_mic_y=0.0):
             ticksContainer.innerHTML = html;
         }
         sliderX.addEventListener('input', updateMicroscopeGrid);
+        sliderY.addEventListener('input', updateMicroscopeGrid);
         updateMicroscopeGrid();
 
         function generatePearContour(progress) {
@@ -101,8 +116,6 @@ def generate_microscope_svg(sigma_true, rho_true, old_mic_x=0.0, old_mic_y=0.0):
             let totalH = 2.0 + (progress * 115.0); 
             let baseR = 35;                      
             let maxBulbR = baseR + (progress * 18); 
-            
-            // Динамический радиус шейки, адаптирующийся под вещество!
             let neckR = baseR - (Math.pow(progress, 2.0) * (baseR - targetNeckRadiusPx)); 
 
             for (let i = 0; i <= steps; i++) {
@@ -184,7 +197,7 @@ def generate_microscope_svg(sigma_true, rho_true, old_mic_x=0.0, old_mic_y=0.0):
     </script>
     """
 
-    # Инжектируем чистые значения физики без ломающих f-строк
+    # Інжектуємо чисті значення фізики речовини
     svg_html = svg_html_template.replace("DYNAMIC_SIGMA", str(sigma_true))
     svg_html = svg_html.replace("DYNAMIC_RHO", str(rho_true))
 
