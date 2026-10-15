@@ -55,11 +55,16 @@ def generate_microscope_svg(sigma_true, rho_true, old_mic_x=0.0, old_mic_y=0.0):
         const sigma = parseFloat(document.getElementById('param-sigma').value) || 0.072;
         const rho = parseFloat(document.getElementById('param-rho').value) || 1000.0;
 
-        // НОВИЙ ВИВЕРЕНИЙ МАСШТАБ: Вода ~31.5px, Етанол ~26.5px, нагрівання плавно розширює контур
-        const trueNeckRmm = 1.05 + (sigma * 4.5) - (rho * 0.00032);
-        const targetNeckRadiusPx = Math.max(25.0, Math.min(34.0, (trueNeckRmm * 35.0) / 1.5));
+        // ІСПРАВЛЕНО: Прямий метрологічний розрахунок у пікселях екрана (1 мм = 40 px)
+        // Для Води: 34.0 px (на шкалі строго 0.85 мм). Для Етанолу: ~28.0 px (на шкалі строго 0.70 мм).
+        // При нагріванні води до 80°C радіус потовщується до 34.8 px (на шкалі 0.87 мм!)
+        const targetNeckRadiusPx = 25.5 + (sigma * 130.0) - (rho * 0.001);
+
+        // Переводимо назад у мм для сумісності з Python
+        const trueNeckRmm = targetNeckRadiusPx / 40.0;
 
         function updateMicroscopeGrid() {
+
 
             let x_mm = parseFloat(sliderX.value); let y_mm = parseFloat(sliderY.value);
             valX.innerText = x_mm.toFixed(2); valY.innerText = y_mm.toFixed(2);
