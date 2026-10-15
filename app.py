@@ -46,19 +46,20 @@ if selected_liquid != st.session_state.last_liquid or temperature != st.session_
     reset_stand_state()
 
 # ==========================================
-# РОЗРАХУНОК ФІЗИКИ З УРАХУВАННЯМ ГЕОМЕТРІЇ ШИЙКИ
+# РОЗРАХУНОК ФІЗИКИ З УРАХУВАННЯМ ГЕОМЕТРІЇ ШИЙКИ (ГОСТ)
 # ==========================================
 sigma_true, rho_true = get_physical_properties(selected_liquid, temperature)
 R_capillary = 0.0015  # 1.5 мм
 g = 9.81
 
-# Емуляція розрахунку радіуса шийки (точно так само, як у JavaScript мікроскопа)
-capillary_constant = (sigma_true / (rho_true * g)) ** 0.5 * 1000  # в мм
-true_neck_r_mm = 0.44 * capillary_constant + 0.28  # істинний радіус шийки в мм
+# Капілярна постійна речовини (в мм)
+capillary_constant = (sigma_true / (rho_true * g)) ** 0.5 * 1000  
 
-# ІСПРАВЛЕНО: Маса каплі жорстко прив'язана до мікроскопічного радіуса шийки конкретної речовини!
-# Коефіцієнт 1.14 тепер працює як ідеальна константа відриву для будь-якого діаметра
-mass_one_drop_true = (1.16 * np.pi * (true_neck_r_mm / 1000.0) * sigma_true) / g
+# ІСПРАВЛЕНО: Фізична модель з мінусом (Тонша шийка у спиртів, товща при нагріванні)
+true_neck_r_mm = 2.16 - 0.44 * capillary_constant  
+
+# Маса каплі жорстко прив'язана до мікроскопічного радіуса шийки
+mass_one_drop_true = (1.14 * np.pi * (true_neck_r_mm / 1000.0) * sigma_true) / g
 
 # Легкий лабораторний шум для ваг
 np.random.seed(int(temperature * 10))
@@ -67,6 +68,7 @@ actual_mass_one_drop = max(1e-6, mass_one_drop_true + np.random.normal(0, mass_o
 # Повна маса рідини у грамах
 total_drops_mass_g = (target_drops * actual_mass_one_drop) * 1000 
 current_weight = st.session_state.tare_weight + total_drops_mass_g
+
 
 
 # Текст заголовка програми
