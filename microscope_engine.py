@@ -54,13 +54,13 @@ def generate_microscope_svg(sigma_true, rho_true, old_mic_x=0.0, old_mic_y=0.0):
 
         const sigma = parseFloat(document.getElementById('param-sigma').value) || 0.072;
         const rho = parseFloat(document.getElementById('param-rho').value) || 1000.0;
-        //const capillaryConstant = Math.sqrt(sigma / (rho * 9.81)) * 1000; 
-        
-        // ТОЧНА СИНХРОНІЗАЦІЯ ШИЙКИ З PYTHON (ВСТАВЛЯТИ СЮДИ)
-        const trueNeckRmm = 0.62 + (sigma * 6.2) - (rho * 0.00005);
-        const targetNeckRadiusPx = Math.max(22.0, Math.min(34.5, (trueNeckRmm * 35.0) / 1.5));
+
+        // НОВИЙ ВИВЕРЕНИЙ МАСШТАБ: Вода ~31.5px, Етанол ~26.5px, нагрівання плавно розширює контур
+        const trueNeckRmm = 1.05 + (sigma * 4.5) - (rho * 0.00032);
+        const targetNeckRadiusPx = Math.max(25.0, Math.min(34.0, (trueNeckRmm * 35.0) / 1.5));
 
         function updateMicroscopeGrid() {
+
             let x_mm = parseFloat(sliderX.value); let y_mm = parseFloat(sliderY.value);
             valX.innerText = x_mm.toFixed(2); valY.innerText = y_mm.toFixed(2);
             let px_x = 200 + (x_mm * 40); let px_y = 200 - (y_mm * 40);
